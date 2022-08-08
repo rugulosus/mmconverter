@@ -4,11 +4,11 @@
 
 添付ファイルが存在する場合はダウンロードし、変換データと一緒にアーカイブしたzipファイルを出力します。
 
-# 動作確認環境
+## 動作確認環境
 
 PowerShell 7.2 on Windows 10 21H2
 
-# 実行方法
+## 実行方法
 
 ```
 .\mmconverter.ps1 [-exportZip] slack-export.zip [-exportUserCsv] slack-users.csv [-teamName] "workspace name" [[-outputZip] import.zip]
@@ -19,7 +19,7 @@ PowerShell 7.2 on Windows 10 21H2
 - **teamName** Mattermostのインポート先となるチーム名を指定します。Slackのワークスペース名に相当します。 **必須**
 - **outputZip** スクリプトが出力するMattermostインポート用zipファイルのパスを指定します。省略した場合はカレントディレクトリに**import.zip**として出力されます。
 
-# mmetlとの違い
+## mmetlとの違い
 
 - mmetlでは変換対象にならない以下のデータを含めたインポートデータの生成
   - リアクション(使用している絵文字は別途登録する必要あり)
@@ -27,6 +27,7 @@ PowerShell 7.2 on Windows 10 21H2
   - ~~Webhook経由で投稿したメッセージ~~(実装予定)
   - 英数字以外の文字を含むチャンネル名
 - 変換データの調整
+  - generalチャンネルをtown-squareにマッピング
   - ~~複数行のコードブロックの表示が崩れる場合があるのを修正~~(実装予定)
   - ~~コードブロック中の記号がURLエンコードされてしまうのを修正~~(実装予定)
 - 入出力データ
