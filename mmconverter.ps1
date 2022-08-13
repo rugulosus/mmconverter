@@ -2,17 +2,20 @@ Param(
     [Parameter(Mandatory)][string]$exportZip,
     [Parameter(Mandatory)][string]$exportUserCsv,
     [Parameter(Mandatory)][string]$teamName,
-    [string]$outputZip = "import.zip"
+    [string]$outputZip = "import.zip",
+    [switch]$jsonlOnly
 )
 
 $exportDataPath = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
-$outputDataPath = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+$outputDataPath = $jsonlOnly ? "." : (Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName()))
 $attachmentDir = "bulk-export-attachments"
 $attachmentPath = Join-Path $outputDataPath (Join-Path "data" $attachmentDir)
 $outputFilename = "import.jsonl"
 $outputFilePath = Join-Path $outputDataPath $outputFilename
 
-New-Item -ItemType Directory -Path $outputDataPath,$attachmentPath
+if (-not $jsonlOnly) {
+    New-Item -ItemType Directory -Path $outputDataPath,$attachmentPath
+}
 
 Expand-Archive -Path $exportZip -DestinationPath $exportDataPath
 
@@ -135,7 +138,9 @@ $slackChannels | ForEach-Object {
             if ($_.files -ne $null) {
                 $_.files | ForEach-Object {
                     $filename = "{0}_{1}" -f $_.id,$_.name
-                    Invoke-WebRequest -Uri $_.url_private_download -OutFile (Join-Path $attachmentPath $filename)
+                    if (-not $jsonlOnly) {
+                        Invoke-WebRequest -Uri $_.url_private_download -OutFile (Join-Path $attachmentPath $filename)
+                    }
                     $attachments += [PSCustomObject]@{
                         path = "{0}/{1}" -f $attachmentDir,$filename
                     }
@@ -168,6 +173,9 @@ $slackChannels | ForEach-Object {
 
 $mmPosts.Values | ForEach-Object {[PSCustomObject]@{type="post"; post=$_} | ConvertTo-Json -Compress -EscapeHandling EscapeHtml -Depth 5} | Sort-Object | Add-Content -Path $outputFilePath
 
-Compress-Archive -Path $outputFilePath,(Join-Path $outputDataPath "data") -DestinationPath $outputZip -Force
+if (-not $jsonlOnly) {
+    Compress-Archive -Path $outputFilePath,(Join-Path $outputDataPath "data") -DestinationPath $outputZip -Force
+    Remove-Item -Path $outputDataPath -Recurse
+}
 
-Remove-Item -Path $exportDataPath,$outputDataPath -Recurse
+Remove-Item -Path $exportDataPath -Recurse
