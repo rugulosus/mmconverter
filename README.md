@@ -11,13 +11,14 @@ PowerShell 7.2 on Windows 10 21H2
 ## 実行方法
 
 ```
-.\mmconverter.ps1 [-exportZip] slack-export.zip [-exportUserCsv] slack-users.csv [-teamName] "workspace name" [[-outputZip] import.zip]
+.\mmconverter.ps1 [-exportZip] slack-export.zip [-exportUserCsv] slack-users.csv [-teamName] "workspace name" [[-outputZip] import.zip] [-jsonlOnly]
 ```
 
 - **exportZip** Slackのエクスポート機能で生成されたzipファイルのパスを指定します。 **必須**
 - **exportUserCsv** Slackのユーザー一覧ページのエクスポート機能で生成されたCSVファイルのパスを指定します。 **必須**
 - **teamName** Mattermostのインポート先となるチーム名を指定します。Slackのワークスペース名に相当します。 **必須**
-- **outputZip** スクリプトが出力するMattermostインポート用zipファイルのパスを指定します。省略した場合はカレントディレクトリに**import.zip**として出力されます。
+- **outputZip** スクリプトが出力するMattermostインポート用zipファイルのパスを指定します。省略した場合はカレントディレクトリに**import.zip**として出力されます。既に同名のzipファイルが存在する場合は上書きします。
+- **jsonlOnly** カレントディレクトリに**import.jsonl**のみを出力します。添付ファイルのダウンロードは行いません。既にimport.jsonlが存在する場合は上書きします。
 
 ## mmetlとの違い
 
