@@ -93,7 +93,7 @@ $slackChannels | ForEach-Object {
             $message = [regex]::Replace($_.text, "<@(\w+)(\|\w+)?>", {$userTable.ContainsKey($args.groups[1].Value) ? "@{0}" -f $userTable[$args.groups[1].Value].username : $args.Value})
             $message = $message -replace "<#\w+\|(\w+)>","~`$1"
             $message = $message -replace "<!here\|@here>","@here" -replace "<!channel>","@channel" -replace "<!everyone>","@all"
-            $message = $message -replace "<([^|<>]+)\|([^|<>]+)>","[`$2](`$1)" -replace "(^|[\s.;,])\*(\S[^*\n]+)\*","`$1**`$2**" -replace "(^|[\s.;,])\~(\S[^~\n]+)\~","`$1~~`$2~~"
+            $message = $message -replace "<([^|<>]+)\|([^|<>]+)>","[`$2](`$1)" -replace "(^|[\s.;,])\*(\S[^*\n]+)\*","`$1**`$2**" -replace "(^|[\s.;,])\~(\S[^~\n]+)\~","`$1~~`$2~~" -replace "(?!\n|^)``````","`n``````" -replace "``````(?!\n|$)","```````n"
             $message = [System.Web.HttpUtility]::HtmlDecode($message)
             $props = if ($_.attachments -ne $null) {
                 [PSCustomObject]@{
