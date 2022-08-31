@@ -26,6 +26,8 @@ Get-Content $exportUserCsv | ConvertFrom-Csv | ForEach-Object {
     $userTable[$_.userid] = $_
 }
 
+$botOwner = @{}
+
 $mmTeam = [PSCustomObject]@{name=$teamName; display_name=$teamName; type="O"; description=""; allow_open_invite=$false}
 
 $mmChannels = $slackChannels | ForEach-Object {
@@ -89,6 +91,11 @@ $slackChannels | ForEach-Object {
             $createAt = [Int64][System.Math]::Round([double][Int64](($_.ts + "0000") -replace "\.(\d{4})\d+","`$1") / 10, [System.MidpointRounding]::AwayFromZero)
             $timestamps += $createAt
             $createAt += ($timestamps | Where-Object {$_ -eq $createAt}).Count - 1
+            if ($_.subtype -eq "bot_add") {
+                if ($_.text -match "/services/(\w+)\|") {
+                    $botOwner[$Matches[1]] = $userTable[$_.user].username
+                }
+            }
             if ($_.subtype -match "bot_add|bot_message|channel_join|pinned_item") {return}
             $message = [regex]::Replace($_.text, "<@(\w+)(\|\w+)?>", {$userTable.ContainsKey($args.groups[1].Value) ? "@{0}" -f $userTable[$args.groups[1].Value].username : $args.Value})
             $message = $message -replace "<#\w+\|(\w+)>","~`$1"
