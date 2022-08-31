@@ -96,38 +96,27 @@ $slackChannels | ForEach-Object {
                     $botOwner[$Matches[1]] = $userTable[$_.user].username
                 }
             }
-            if ($_.subtype -match "bot_add|bot_message|channel_join|pinned_item") {return}
+            if ($_.subtype -match "bot_add|channel_join|pinned_item") {return}
             $message = [regex]::Replace($_.text, "<@(\w+)(\|\w+)?>", {$userTable.ContainsKey($args.groups[1].Value) ? "@{0}" -f $userTable[$args.groups[1].Value].username : $args.Value})
             $message = $message -replace "<#\w+\|(\w+)>","~`$1"
             $message = $message -replace "<!here\|@here>","@here" -replace "<!channel>","@channel" -replace "<!everyone>","@all"
             $message = $message -replace "<([^|<>]+)\|([^|<>]+)>","[`$2](`$1)" -replace "(^|[\s.;,])\*(\S[^*\n]+)\*","`$1**`$2**" -replace "(^|[\s.;,])\~(\S[^~\n]+)\~","`$1~~`$2~~" -replace "(?!\n|^)``````","`n``````" -replace "``````(?!\n|$)","```````n"
             $message = [System.Web.HttpUtility]::HtmlDecode($message)
-            $props = if ($_.attachments -ne $null) {
-                [PSCustomObject]@{
-                    attachments = @($_.attachments | ForEach-Object {
-                        [PSCustomObject]@{
-                            id = $_.id ?? 0;
-                            fallback = $_.fallback ?? "";
-                            color = $_.color ?? "";
-                            pretext = $_.pretext ?? "";
-                            author_name = $_.author_name ?? "";
-                            author_link = $_.author_link ?? "";
-                            author_icon = $_.author_icon ?? "";
-                            title = $_.title ?? "";
-                            title_link = $_.title_link ?? "";
-                            text = $_.text ?? "";
-                            fields = $null;
-                            image_url = $_.image_url ?? "";
-                            thumb_url = $_.thumb_url ?? "";
-                            footer = $_.footer ?? "";
-                            footer_icon = $_.footer_icon ?? "";
-                            ts = $_.ts;
-                        }
-                    })
-                }
-            } else {
-                $null
+            $props = @{}
+            if ($_.attachments -ne $null) {
+                $props.attachments = $_.attachments
+                $props.attachments | Where-Object {$_.color -ne $null} | ForEach-Object {$_.color = "#{0}" -f $_.color.TrimStart('#')}
             }
+            if ($_.subtype -eq "bot_message") {
+                $props.from_webhook = "true"
+                if ($_.username -ne $null) {
+                    $props.override_username = $_.username
+                }
+                if (($_.icons -ne $null) -and ($_.icons.emoji -ne $null)) {
+                    $props.override_icon_emoji = $_.icons.emoji
+                }
+            }
+            $props = $props.Count -eq 0 ? $null : [PSCustomObject]$props
             $reactions = @()
             if ($_.reactions -ne $null) {
                 $_.reactions | ForEach-Object {
@@ -154,32 +143,39 @@ $slackChannels | ForEach-Object {
                     }
                 }
             }
-            if (($_.thread_ts -eq $null) -or ($_.thread_ts -eq $_.ts)) {
-                $mmPosts[$_.ts] = [PSCustomObject]@{
+            $post = @{
+                channel = $channelName;
+                message = $message;
+                props = $props;
+                create_at = $createAt;
+                reactions = $reactions;
+                attachments = $attachments;
+            }
+            if ($_.subtype -eq "bot_message") {
+                $mmPosts[$_.ts] = [PSCustomObject]($post + @{
                     team = $teamName;
-                    channel = $channelName;
-                    user = $userTable[$_.user].username;
-                    message = $message;
-                    props = $props;
-                    create_at = $createAt;
-                    reactions = $reactions;
+                    user = $botOwner.ContainsKey($_.bot_id) ? $botOwner[$_.bot_id] : $slackUsers[0].name;
+                    type = ($_.text -eq "") -and ($_.attachments -ne $null) ? "slack_attachment" : "";
                     replies = @();
-                    attachments = $attachments;
-                }
+                })
             } else {
-                $mmPosts[$_.thread_ts].replies += [PSCustomObject]@{
-                    user = $userTable[$_.user].username;
-                    message = $message;
-                    create_at = $createAt;
-                    reactions = $reactions;
-                    attachments = $attachments;
+                if (($_.thread_ts -eq $null) -or ($_.thread_ts -eq $_.ts)) {
+                    $mmPosts[$_.ts] = [PSCustomObject]($post + @{
+                        team = $teamName;
+                        user = $userTable[$_.user].username;
+                        replies = @();
+                    })
+                } else {
+                    $mmPosts[$_.thread_ts].replies += [PSCustomObject]($post + @{
+                        user = $userTable[$_.user].username;
+                    })
                 }
             }
         }
     }
 }
 
-$mmPosts.Values | ForEach-Object {[PSCustomObject]@{type="post"; post=$_} | ConvertTo-Json -Compress -EscapeHandling EscapeHtml -Depth 5} | Add-Content -Path $outputFilePath
+$mmPosts.Values | ForEach-Object {[PSCustomObject]@{type="post"; post=$_} | ConvertTo-Json -Compress -EscapeHandling EscapeHtml -Depth 7} | Add-Content -Path $outputFilePath
 
 if (-not $jsonlOnly) {
     Compress-Archive -Path $outputFilePath,(Join-Path $outputDataPath "data") -DestinationPath $outputZip -Force
