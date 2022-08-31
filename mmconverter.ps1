@@ -179,7 +179,7 @@ $slackChannels | ForEach-Object {
     }
 }
 
-$mmPosts.Values | ForEach-Object {[PSCustomObject]@{type="post"; post=$_} | ConvertTo-Json -Compress -EscapeHandling EscapeHtml -Depth 5} | Sort-Object | Add-Content -Path $outputFilePath
+$mmPosts.Values | ForEach-Object {[PSCustomObject]@{type="post"; post=$_} | ConvertTo-Json -Compress -EscapeHandling EscapeHtml -Depth 5} | Add-Content -Path $outputFilePath
 
 if (-not $jsonlOnly) {
     Compress-Archive -Path $outputFilePath,(Join-Path $outputDataPath "data") -DestinationPath $outputZip -Force
